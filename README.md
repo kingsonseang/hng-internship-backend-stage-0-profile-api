@@ -177,7 +177,37 @@ air
 ```
 
 **Build for production:**
+
+**Using Docker (recommended):**
+
+Build and run:
 ```bash
+# Build image
+docker build -t profile-api .
+
+# Run container
+docker run -p 8080:8080 \
+  -e USER_EMAIL="your@email.com" \
+  -e USER_NAME="Your Name" \
+  -e USER_STACK="Go" \
+  -e PORT=8080 \
+  profile-api
+```
+
+**Or use docker-compose:**
+
+Run:
+```bash
+docker-compose up -d
+```
+
+**Without Docker (direct binary):**
+```bash
+# Windows
+go build -o api.exe main.go
+./api.exe
+
+# Linux/Mac
 go build -o api main.go
 ./api
 ```
