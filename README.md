@@ -176,6 +176,23 @@ go install github.com/air-verse/air@latest
 air
 ```
 
+## Testing
+
+Run tests:
+```bash
+go test
+```
+
+Run with coverage:
+```bash
+go test -cover
+```
+
+Run verbose:
+```bash
+go test -v
+```
+
 **Build for production:**
 
 **Using Docker (recommended):**

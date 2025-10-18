@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Start HTTP server
-	log.Printf("Server starting on :%s", port)
+	log.Println("Server starting on:", port)
 	http.ListenAndServe(":"+port, nil)
 }
 
