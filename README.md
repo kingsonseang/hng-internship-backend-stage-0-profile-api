@@ -28,8 +28,8 @@ A simple RESTful API built with Go that returns user profile information along w
 
 1. **Clone the repository**
 ```bash
-git clone <your-repo-url>
-cd <project-folder>
+git clone https://github.com/kingsonseang/hng-internship-backend-stage-0-profile-api
+cd hng-internship-backend-stage-0-profile-api
 ```
 
 2. **Install dependencies**
