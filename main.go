@@ -6,10 +6,77 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/time/rate"
 )
+
+// IP-based rate limiter
+type IPRateLimiter struct {
+	ips map[string]*rate.Limiter
+	mu  *sync.RWMutex
+	r   rate.Limit
+	b   int
+}
+
+// Create new rate limiter
+func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
+	return &IPRateLimiter{
+		ips: make(map[string]*rate.Limiter),
+		mu:  &sync.RWMutex{},
+		r:   r,
+		b:   b,
+	}
+}
+
+// Get limiter for IP
+func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	limiter, exists := i.ips[ip]
+	if !exists {
+		limiter = rate.NewLimiter(i.r, i.b)
+		i.ips[ip] = limiter
+	}
+
+	return limiter
+}
+
+// Global rate limiter - 10 requests per minute per IP
+var limiter *IPRateLimiter
+
+func init() {
+	limiter = NewIPRateLimiter(rate.Every(time.Minute/10), 10)
+}
+
+// Rate limit middleware - use the global limiter pointer
+func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get client IP
+		ip := r.RemoteAddr
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			ip = forwarded
+		}
+
+		// Check rate limit - use global limiter
+		ipLimiter := limiter.GetLimiter(ip)
+		if !ipLimiter.Allow() {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(Response{
+				Status:    "error",
+				Message:   "rate limit exceeded",
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+			})
+			return
+		}
+
+		next(w, r)
+	}
+}
 
 func main() {
 	// Load environment variables from .env file
@@ -19,8 +86,8 @@ func main() {
 	}
 
 	// Register route handlers
-	http.HandleFunc("/", rootHandler)
-	http.HandleFunc("/me", meHandler)
+	http.HandleFunc("/", rateLimitMiddleware(rootHandler))
+	http.HandleFunc("/me", rateLimitMiddleware(meHandler))
 
 	// Get port from environment or use default
 	port := os.Getenv("PORT")
